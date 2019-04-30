@@ -1,0 +1,381 @@
+{
+	"info": {
+		"_postman_id": "eabae84f-b8de-449c-bc7e-d19644ba1202",
+		"name": "gpi Pre-Validation internet client",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Beneficiary account pre-validation ",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "3247ab81-a519-47ca-9cf2-1e4be46761ab",
+						"exec": [
+							"pm.test(\"The API request is compliant to the JSON schema\", function () {",
+							"",
+							"    // Load the JSON Schema",
+							"    var schema = JSON.parse(pm.variables.get(\"camt.b11.001.01\"));",
+							"    ",
+							"    // Test whether the request matches the schema",
+							"    var _request = JSON.parse(request.data);",
+							"",
+							"    var result = tv4.validateMultiple(_request, schema);",
+							"    ",
+							"    // Iterate overall all errors if any",
+							"    if(result.valid === false) {",
+							"        console.log(\"JSON schema errors:\");",
+							"        result.errors.forEach(function(error) {",
+							"            console.log(error);",
+							"        });",
+							"    }",
+							"    pm.expect(result.valid).to.be.equal(true);",
+							"",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "db628a53-0c06-4b12-996a-756d088a99f2",
+						"exec": [
+							"pm.test(\"The API response is compliant to the JSON schema\", function () {",
+							"",
+							"    // Load the JSON Schema",
+							"    var schema = JSON.parse(pm.variables.get(\"camt.b11.001.01\"));",
+							"    ",
+							"    // Test whether the response matches the schema",
+							"    var _response = JSON.parse(responseBody);",
+							"    ",
+							"    var result = tv4.validateMultiple(_response, schema);",
+							"    ",
+							"    // Iterate overall all errors if any",
+							"    if(result.valid === false) {",
+							"        console.log(\"JSON schema errors:\");",
+							"        result.errors.forEach(function(error) {",
+							"            console.log(error);",
+							"        });",
+							"    }",
+							"    pm.expect(result.valid).to.be.equal(true);",
+							"",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json; charset=utf-8",
+						"type": "text"
+					},
+					{
+						"key": "LAUApplicationID",
+						"value": "{{applicationId}}",
+						"type": "text"
+					},
+					{
+						"key": "LAUVersion",
+						"value": "{{version}}",
+						"type": "text"
+					},
+					{
+						"key": "LAUCallTime",
+						"value": "{{callTime}}",
+						"type": "text"
+					},
+					{
+						"key": "LAURequestNonce",
+						"value": "{{requestNonce}}",
+						"type": "text"
+					},
+					{
+						"key": "LAUSigned",
+						"value": "(ApplAPIKey=yVGhKiV5z1ZGdaqFXoZ8AiSA9n5CrY6B),(RBACRole=[FullViewer/Scope/BANABEBB])",
+						"type": "text"
+					},
+					{
+						"key": "LAUSignature",
+						"value": "{{signature}}",
+						"type": "text"
+					},
+					{
+						"key": "x-bic",
+						"value": "{{bic}}",
+						"type": "text"
+					},
+					{
+						"key": "SubjectDN",
+						"value": "{{dn}}",
+						"type": "text"
+					},
+					{
+						"key": "Institution",
+						"value": "{{bic}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"correlation_identifier\": \"CORRID-003\",\r\n\r\n\"context\": \"BENR\",\r\n\r\n\"uetr\": \"b916a97d-a699-4f20-b8c2-2b07e2684a27\",\r\n\r\n\"creditor_account\": \"GB3112000000001987426375\",\r\n\r\n\"creditor_name\": \"John Doe\",\r\n\r\n\"creditor_address\":\r\n{\"country\": \"GB\"\r\n\r\n},\r\n\r\n\"creditor_organisation_identification\":\r\n{\"any_bic\": \"BANABEBB\"\r\n\r\n}\r\n}"
+				},
+				"url": {
+					"raw": "https://virtserver.swaggerhub.com/SWIFT-API/gpi-api/v1/accounts/verification",
+					"protocol": "https",
+					"host": [
+						"virtserver",
+						"swaggerhub",
+						"com"
+					],
+					"path": [
+						"SWIFT-API",
+						"gpi-api",
+						"v1",
+						"accounts",
+						"verification"
+					]
+				},
+				"description": "Beneficiary account pre-validation."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "68d3fc70-5b6c-4837-8096-13a6eec5f733",
+				"type": "text/javascript",
+				"exec": [
+					"// Declare packages required",
+					"const uuid = require(\"uuid\");",
+					"const url = require('url');",
+					"const crypto = require(\"crypto-js\");",
+					"",
+					"// Dynamically set LAUCallTime",
+					"var callTime = new Date();",
+					"pm.globals.set(\"callTime\", callTime);",
+					"// Dynamically set LAURequestNonce",
+					"var requestNonce = uuid.v4();",
+					"pm.globals.set(\"requestNonce\", requestNonce);",
+					"",
+					"////////////////////////////////////////////////////////////////////////////////////////////////",
+					"// Calculate signature",
+					"",
+					"const CRLF = \"\\r\\n\";",
+					"var applicationId = pm.variables.get(\"applicationId\"); ",
+					"var signed = pm.request.headers.get(\"LAUSigned\");",
+					"var version = pm.variables.get(\"version\");",
+					"var xBic = pm.request.headers.get(\"x-bic\");",
+					"var subjectDN = pm.request.headers.get(\"SubjectDN\");",
+					"var institution = pm.request.headers.get(\"Institution\");",
+					"var absPath = url.parse(request.url, true).pathname;",
+					"var requestBody = request.data;",
+					"",
+					"var sb = \"\";",
+					"sb += \"LAUApplicationID:\";",
+					"sb += applicationId.trim();",
+					"sb += CRLF;",
+					"sb += \"LAUCallTime:\";",
+					"sb += callTime.toISOString().trim();",
+					"sb += CRLF;",
+					"sb += \"LAURequestNonce:\";",
+					"sb += requestNonce.trim();",
+					"sb += CRLF;",
+					"sb += \"LAUSigned:\";",
+					"sb += signed.trim();",
+					"sb += CRLF;",
+					"sb += \"LAUVersion:\";",
+					"sb += version.trim();",
+					"sb += CRLF;",
+					"sb += \"x-bic\";",
+					"sb += xBic.trim();",
+					"sb += CRLF;",
+					"sb += \"SubjectDN\";",
+					"sb += subjectDN.trim();",
+					"sb += CRLF;",
+					"sb += \"Institution\";",
+					"sb += institution.trim();",
+					"sb += CRLF;",
+					"sb += absPath.trim();",
+					"sb += CRLF;",
+					"sb += requestBody;",
+					"",
+					"// Calculate HMAC-SHA256 signature",
+					"var signature = crypto.HmacSHA256(sb, pm.variables.get(\"lauKey\"));",
+					"signature.sigBytes = 16;",
+					"var signatureCalculated = crypto.enc.Base64.stringify(signature);",
+					"console.log(\"signatureCalculated: \", signatureCalculated);",
+					"",
+					"// Set calculated signature",
+					"pm.globals.set(\"signature\", signatureCalculated);",
+					"",
+					"",
+					"pm.test(\"LAUApplicationID is present\", function () {",
+					"    pm.request.to.have.header(\"LAUApplicationID\");",
+					"});",
+					"",
+					"pm.test(\"LAUVersion is present\", function () {",
+					"    pm.request.to.have.header(\"LAUVersion\");",
+					"});",
+					"",
+					"pm.test(\"LAUCallTime is present\", function () {",
+					"    pm.request.to.have.header(\"LAUCallTime\");",
+					"});",
+					"",
+					"pm.test(\"LAURequestNonce is present\", function () {",
+					"    pm.request.to.have.header(\"LAURequestNonce\");",
+					"});",
+					"",
+					"pm.test(\"LAUSigned is present\", function () {",
+					"    pm.request.to.have.header(\"LAUSigned\");",
+					"});",
+					"",
+					"pm.test(\"x-bic is present\", function () {",
+					"    pm.request.to.have.header(\"x-bic\");",
+					"});",
+					"",
+					"pm.test(\"SubjectDN is present\", function () {",
+					"    pm.request.to.have.header(\"SubjectDN\");",
+					"});",
+					"",
+					"pm.test(\"Institution is present\", function () {",
+					"    pm.request.to.have.header(\"Institution\");",
+					"});",
+					"",
+					"pm.test(\"LAUSignature is present\", function () {",
+					"    pm.request.to.have.header(\"LAUSignature\");",
+					"});",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "741244cc-90f9-4e49-80a7-2cf4939ba83d",
+				"type": "text/javascript",
+				"exec": [
+					"// Declare packages required",
+					"const crypto = require(\"crypto-js\");",
+					"",
+					"// Status code is 200",
+					"pm.test(\"Status code is 200\", function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// Response time is less than 1000 ms",
+					"pm.test(\"Response time is less than 1000 ms\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(1000);",
+					"});",
+					"",
+					"pm.test(\"Content-Type is present\", function () {",
+					"    pm.response.to.have.header(\"Content-Type\");",
+					"});",
+					"",
+					"////////////////////////////////////////////////////////////////////////////////////////////////",
+					"// Verify signature",
+					"",
+					"pm.test(\"API response signature is valid\", function () {",
+					"    ",
+					"    const CRLF = \"\\r\\n\";",
+					"    var applicationId = pm.response.headers.get(\"LAUApplicationID\");",
+					"    var callTime = pm.response.headers.get(\"LAUCallTime\");",
+					"    var requestNonce = pm.response.headers.get(\"LAURequestNonce\");",
+					"    var responseNonce = pm.response.headers.get(\"LAUResponseNonce\");",
+					"    var version = pm.response.headers.get(\"LAUVersion\");",
+					"    var signatureReceived = pm.response.headers.get(\"LAUSignature\");",
+					"    console.log(\"signatureReceived :\", signatureReceived);",
+					"    ",
+					"    if(typeof(applicationId) !== \"undefined\" &&",
+					"        typeof(callTime) !== \"undefined\" &&",
+					"        typeof(requestNonce) !== \"undefined\" &&",
+					"        typeof(responseNonce) !== \"undefined\" &&",
+					"        typeof(version) !== \"undefined\" &&",
+					"        typeof(signatureReceived) !== \"undefined\") {",
+					"    ",
+					"        var sb = \"\";",
+					"        sb += \"LAUApplicationID:\";",
+					"        sb += applicationId.trim();",
+					"        sb += CRLF;",
+					"        sb += \"LAUCallTime:\";",
+					"        sb += callTime.trim();",
+					"        sb += CRLF;",
+					"        sb += \"LAURequestNonce:\";",
+					"        sb += requestNonce.trim();",
+					"        sb += CRLF;",
+					"        sb += \"LAUResponseNonce:\";",
+					"        sb += responseNonce.trim();",
+					"        sb += CRLF;",
+					"        sb += \"LAUVersion:\";",
+					"        sb += version.trim();",
+					"        sb += CRLF;",
+					"        sb += responseBody;",
+					"    ",
+					"        // Calculate HMAC-SHA256 signature",
+					"        var signature = crypto.HmacSHA256(sb, pm.variables.get(\"lauKey\"));",
+					"        signature.sigBytes = 16;",
+					"        var signatureRecalculated = crypto.enc.Base64.stringify(signature);",
+					"        console.log(\"signatureRecalculated :\", signatureRecalculated);",
+					"        ",
+					"        pm.expect(signatureReceived).to.be.equal(signatureRecalculated);",
+					"    } else {",
+					"        pm.expect(false).to.be.equal(true);",
+					"    }",
+					"",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"id": "36f8aa70-db78-4d13-9a3e-13a569cbfabb",
+			"key": "applicationId",
+			"value": "001",
+			"type": "string"
+		},
+		{
+			"id": "b536042c-c7dd-4fd1-96e6-f956e2a90b9d",
+			"key": "version",
+			"value": "1.0",
+			"type": "string"
+		},
+		{
+			"id": "baa07b36-5875-441c-8579-60f29e260ce2",
+			"key": "lauKey",
+			"value": "Abcd1234Abcd1234Abcd1234Abcd1234",
+			"type": "string"
+		},
+		{
+			"id": "958d05b9-892c-458d-aebd-7579e9a4fc15",
+			"key": "camt.b11.001.01",
+			"value": "{\n  \"swagger\" : \"2.0\",\n  \"info\" : {\n    \"description\" : \"Move your app forward with the Account Pre-Validation API\",\n    \"version\" : \"1.0.7\",\n    \"title\" : \"Beneficiary account pre-validation\",\n    \"license\" : {\n      \"name\" : \"API Restricted License\",\n      \"url\" : \"https://www.swift.com/file/56776/download?token=8w8DC4eF\"\n    }\n  },\n  \"host\" : \"apigtw-test.swiftnet.sipn.swift.com\",\n  \"basePath\" : \"/swift-preval-pilot\",\n  \"schemes\" : [ \"https\" ],\n  \"consumes\" : [ \"application/json\" ],\n  \"produces\" : [ \"application/json\" ],\n  \"paths\" : {\n    \"/v1/accounts/verification\" : {\n      \"post\" : {\n        \"tags\" : [ \"Verify Account\" ],\n        \"summary\" : \"Verify that a beneficiary account could be able to receive incoming funds.\",\n        \"description\" : \"The service verifies that an account exists at the beneficiary bank and is capable of receiving incoming funds. This usually implies that the account is open, properly identified by the given number and, depending on the  jurisdiction and the market practices in use where the account is held, that the creditor name matches the name of the account holder.  The service provider does not take liability for the response and does not provide any guarantee on the outcome of an actual transaction being sent to this account. The information provided is meant to be as accurate as possible at the time that the request was processed.  The requester must pass the creditor name and the service provider can use  this information as part of the verification or not.\\n\",\n        \"operationId\" : \"VerifyAccount\",\n        \"parameters\" : [ {\n          \"name\" : \"LAUApplicationID\",\n          \"in\" : \"header\",\n          \"description\" : \"ID that identifies the application generating the API and used by the gpi Connector to retrieve the related LAU keys, required for consumers using gpi connector only\",\n          \"required\" : true,\n          \"type\" : \"string\",\n          \"default\" : \"001\",\n          \"pattern\" : \"^(?:[a-zA-Z0-9]{1,16})$\"\n        }, {\n          \"name\" : \"LAUVersion\",\n          \"in\" : \"header\",\n          \"description\" : \"version of the LAUSigned header. Mandatory. \\\"1.0\\\" for this first release, required for consumers using gpi connector only\",\n          \"required\" : true,\n          \"type\" : \"string\",\n          \"default\" : \"1.0\",\n          \"pattern\" : \"^(?:[1][\\\\.][0])$\"\n        }, {\n          \"name\" : \"LAUCallTime\",\n          \"in\" : \"header\",\n          \"description\" : \"timestamp in UTC of the API call in the format YYYY-MM-DDTHH:MM:SS.sssZ, required for consumers using gpi connector only\",\n          \"required\" : true,\n          \"type\" : \"string\",\n          \"default\" : \"2018-03-23T15:56:26.728Z\",\n          \"pattern\" : \"^(?:[1-9]\\\\d{3}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\\\\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[1-9]\\\\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)T(?:[01]\\\\d|2[0-3]):[0-5]\\\\d:[0-5]\\\\d(?:\\\\.[0-9]+)?(?:Z|[+-][01]\\\\d:[0-5]\\\\d)?$\"\n        }, {\n          \"name\" : \"LAURequestNonce\",\n          \"in\" : \"header\",\n          \"description\" : \"a random value generated by the client consumer. Provided with the request and copied by the gpi Connector on the response, required for consumers using gpi connector only\",\n          \"required\" : true,\n          \"type\" : \"string\",\n          \"default\" : \"e802ab96-bb3a-4965-9139-5214b9f0f074\",\n          \"pattern\" : \"^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$\"\n        }, {\n          \"name\" : \"LAUSigned\",\n          \"in\" : \"header\",\n          \"description\" : \"service specific HTTP headers composed of apiKey, rbac role and bic to route the request, required for consumers using gpi connector only\",\n          \"required\" : true,\n          \"type\" : \"string\",\n          \"default\" : \"(ApplAPIKey=yVGhKiV5z1ZGdaqFXoZ8AiSA9n5CrY6B),(RBACRole=[Update/Scope/cclabeb0],(x-bic=cclabeb0))\",\n          \"pattern\" : \"^(?:\\\\(ApplAPIKey=.{1,40}\\\\),\\\\(RBACRole=\\\\[(Update|StandardViewer|FullViewer)\\\\/Scope(\\\\/[a-z]{6,6}[a-z2-9][a-np-z0-9])+\\\\],\\\\(x-bic=[a-z]{6,6}[a-z2-9][a-np-z0-9]\\\\)\\\\))?$\"\n        }, {\n          \"name\" : \"LAUSignature\",\n          \"in\" : \"header\",\n          \"description\" : \"contains the LAU (SHA256) signature, base64 encoded, required for consumers using gpi connector only\",\n          \"required\" : true,\n          \"type\" : \"string\",\n          \"default\" : \"U1khA8h9Lm1PqzB99fG6uw==\",\n          \"pattern\" : \"^(?:[A-Za-z0-9+\\\\/]{4})*(?:[A-Za-z0-9+\\\\/]{2}==|[A-Za-z0-9+\\\\/]{3}=)?$\",\n          \"x-swift-lau-request\" : {\n            \"cryptography\" : \"hmac-sha256\",\n            \"sigBytes\" : 16,\n            \"inputDataPrefix\" : \":\",\n            \"inputDataDelimiter\" : \"CRLF\",\n            \"inputData\" : {\n              \"type\" : \"object\",\n              \"properties\" : {\n                \"LAUApplicationID\" : {\n                  \"type\" : \"string\"\n                },\n                \"LAUCallTime\" : {\n                  \"type\" : \"string\"\n                },\n                \"LAURequestNonce\" : {\n                  \"type\" : \"string\"\n                },\n                \"LAUSigned\" : {\n                  \"type\" : \"string\"\n                },\n                \"LAUVersion\" : {\n                  \"type\" : \"string\"\n                },\n                \"absPath\" : {\n                  \"type\" : \"string\"\n                },\n                \"requestBody\" : {\n                  \"type\" : \"string\"\n                }\n              },\n              \"required\" : [ \"LAUApplicationID\", \"LAUCallTime\", \"LAURequestNonce\", \"LAUSigned\", \"LAUVersion\", \"absPath\", \"requestBody\" ]\n            }\n          }\n        }, {\n          \"name\" : \"x-bic\",\n          \"in\" : \"header\",\n          \"description\" : \"describe the BIC for SWIFT to route the request, providers get the value and consumers are not required to fill it in\",\n          \"required\" : false,\n          \"type\" : \"string\",\n          \"default\" : \"cclabeb0\",\n          \"pattern\" : \"^[a-z]{6,6}[a-z2-9][a-np-z0-9]$\"\n        }, {\n          \"name\" : \"SubjectDN\",\n          \"in\" : \"header\",\n          \"description\" : \"describe the distinguish name of the consumer, providers get the value and consumers are not required to fill it in\",\n          \"required\" : false,\n          \"type\" : \"string\",\n          \"default\" : \"o=cclausb0,o=swift\"\n        }, {\n          \"name\" : \"Institution\",\n          \"in\" : \"header\",\n          \"description\" : \"describe the BIC of the consumer, providers get the value and consumers are not required to fill it in\",\n          \"required\" : false,\n          \"type\" : \"string\",\n          \"default\" : \"cclausb0\"\n        }, {\n          \"in\" : \"body\",\n          \"name\" : \"request_body\",\n          \"description\" : \"Verify Account Details Request.\",\n          \"required\" : true,\n          \"schema\" : {\n            \"$ref\" : \"#/definitions/AccountVerificationRequest\"\n          }\n        } ],\n        \"responses\" : {\n          \"200\" : {\n            \"description\" : \"Get Account Details Response\",\n            \"examples\" : {\n              \"scenario1_success\" : {\n                \"description\" : \"The service provider is in 'scenario 1' (its jurisdiction does not require to verify the creditor name and its implementation does not verify the creditor name). There is an account in the beneficiary bankâ€™s books that is identified by the account identifier (number)  passed in the request and the holder of which corresponds to the given creditor name.  This account is open and capable of receiving funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO1-CORRID-001\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario1_failure_account_does_match\" : {\n                \"description\" : \"The service provider is in 'scenario 1' (its jurisdiction does not require to verify the creditor name and its implementation does not verify the creditor name). The account number provided in the request is not in the beneficiary bankâ€™s books, and thus cannot receive  incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO1-CORRID-002\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario1_account_match_but_blocked_for_compliance_reason\" : {\n                \"description\" : \"The service provider is in 'scenario 1' (its jurisdiction does not require to verify the creditor name and its implementation does not verify the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However the account is  blocked for compliance reasons. The beneficiary bank cannot disclose any information about this state (â€˜no tipping offâ€™).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO1-CORRID-003\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario1_account_exists_but_type_does_not_allow_incoming_funds\" : {\n                \"description\" : \"The service provider is in 'scenario 1' (its jurisdiction does not require to verify the creditor name and its implementation does not verify the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However this type of  account does not allow incoming funds (eg. mortgage account).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO1-CORRID-004\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario1_account_exists_but_closed\" : {\n                \"description\" : \"The service provider is in 'scenario 1' (its jurisdiction does not require to verify the creditor name and its implementation does not verify the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books but classified as closed  and thus cannot receive incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO1-CORRID-005\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario1_account_matches_but_name_does_match\" : {\n                \"description\" : \"The service provider is in 'scenario 1' (its jurisdiction does not require to verify the creditor name and its implementation does not verify the creditor name). The account number provided in the request identifies an account in the beneficiary bankâ€™s books and is in a  state to be the target account of a payment transaction. However the name of the account holder doesnâ€™t match  the one provided in the request.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO1-CORRID-006\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario2_success_name_and_account_match\" : {\n                \"description\" : \"The service provider is in 'scenario 2' (its jurisdiction does not require to verify the creditor name but its pre-validation implementation verifies the creditor name). There is an account in the beneficiary bankâ€™s books that is identified by the account identifier (number)  passed in the request and the holder of which corresponds to the given creditor name.  This account is open and capable of receiving funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO2-CORRID-001\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"MTCH\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario2_failure_account_does_not_match\" : {\n                \"description\" : \"The service provider is in 'scenario 2' (its jurisdiction does not require to verify the creditor name but its pre-validation implementation verifies the creditor name). The account number provided in the request is not in the beneficiary bankâ€™s books, and thus cannot receive  incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO2-CORRID-002\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario2_account_match_but_blocked_for_compliance_reason\" : {\n                \"description\" : \"The service provider is in 'scenario 2' (its jurisdiction does not require to verify the creditor name but its pre-validation implementation verifies the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However the account is  blocked for compliance reasons. The beneficiary bank cannot disclose any information about this state (â€˜no tipping offâ€™).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO2-CORRID-003\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"MTCH\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario2_account_exists_but_type_does_not_allow_incoming_funds\" : {\n                \"description\" : \"The service provider is in 'scenario 2' (its jurisdiction does not require to verify the creditor name but its pre-validation implementation verifies the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However this type of  account does not allow incoming funds (eg. mortgage account).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO2-CORRID-004\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario2_account_exists_but_closed\" : {\n                \"description\" : \"The service provider is in 'scenario 2' (its jurisdiction does not require to verify the creditor name but its pre-validation implementation verifies the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books but classified as closed  and thus cannot receive incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO2-CORRID-005\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario2_account_matches_but_name_does_match\" : {\n                \"description\" : \"The service provider is in 'scenario 2' (its jurisdiction does not require to verify the creditor name but its pre-validation implementation verifies the creditor name). The account number provided in the request identifies an account in the beneficiary bankâ€™s books and is in a  state to be the target account of a payment transaction. However the name of the account holder doesnâ€™t match  the one provided in the request.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO2-CORRID-006\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario3_success_name_and_account_match\" : {\n                \"description\" : \"The service provider is in 'scenario 3' (its jurisdiction requires to verify the creditor name and its pre-validation implementation verifies the creditor name). There is an account in the beneficiary bankâ€™s books that is identified by the account identifier (number)  passed in the request and the holder of which corresponds to the given creditor name.  This account is open and capable of receiving funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO3-CORRID-001\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"MTCH\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario3_failure_account_does_not_match\" : {\n                \"description\" : \"The service provider is in 'scenario 3' (its jurisdiction requires to verify the creditor name and its pre-validation implementation verifies the creditor name). The account number provided in the request is not in the beneficiary bankâ€™s books, and thus cannot receive  incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO3-CORRID-002\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario3_account_match_but_blocked_for_compliance_reason\" : {\n                \"description\" : \"The service provider is in 'scenario 3' (its jurisdiction requires to verify the creditor name and its pre-validation implementation verifies the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However the account is  blocked for compliance reasons. The beneficiary bank cannot disclose any information about this state (â€˜no tipping offâ€™).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO3-CORRID-003\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"MTCH\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario3_account_exists_but_type_does_not_allow_incoming_funds\" : {\n                \"description\" : \"The service provider is in 'scenario 3' (its jurisdiction requires to verify the creditor name\\n and its pre-validation implementation verifies the creditor name).\\n The account number provided in the request is in the beneficiary bankâ€™s books. However this type of \\n account does not allow incoming funds (eg. mortgage account).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO3-CORRID-004\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario3_account_exists_but_closed\" : {\n                \"description\" : \"The service provider is in 'scenario 3' (its jurisdiction requires to verify the creditor name and its pre-validation implementation verifies the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books but classified as closed  and thus cannot receive incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO3-CORRID-005\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario3_account_matches_but_name_does_match\" : {\n                \"description\" : \"The service provider is in 'scenario 3' (its jurisdiction requires to verify the creditor name and its pre-validation implementation verifies the creditor name). The account number provided in the request identifies an account in the beneficiary bankâ€™s books and is in a  state to be the target account of a payment transaction. However the name of the account holder doesnâ€™t match  the one provided in the request.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO3-CORRID-006\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"PASS\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOAP\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario4_success_name_and_account_match\" : {\n                \"description\" : \"The service provider is in 'scenario 4' (its jurisdiction requires to verify the creditor name but its pre-validation implementation does not verify the creditor name). There is an account in the beneficiary bankâ€™s books that is identified by the account identifier (number)  passed in the request and the holder of which corresponds to the given creditor name.  This account is open and capable of receiving funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO4-CORRID-001\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"INCO\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario4_failure_account_does_not_match\" : {\n                \"description\" : \"The service provider is in 'scenario 4' (its jurisdiction requires to verify the creditor name but its pre-validation implementation does not verify the creditor name). The account number provided in the request is not in the beneficiary bankâ€™s books, and thus cannot receive  incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO4-CORRID-002\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario4_account_match_but_blocked_for_compliance_reason\" : {\n                \"description\" : \"The service provider is in 'scenario 4' (its jurisdiction requires to verify the creditor name but its pre-validation implementation does not verify the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However the account is  blocked for compliance reasons. The beneficiary bank cannot disclose any information about this state (â€˜no tipping offâ€™).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO4-CORRID-003\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"INCO\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOTCH\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario4_account_exists_but_type_does_not_allow_incoming_funds\" : {\n                \"description\" : \"The service provider is in 'scenario 4' (its jurisdiction requires to verify the creditor name but its pre-validation implementation does not verify the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books. However this type of  account does not allow incoming funds (eg. mortgage account).\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO4-CORRID-004\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario4_account_exists_but_closed\" : {\n                \"description\" : \"The service provider is in 'scenario 4' (its jurisdiction requires to verify the creditor name but its pre-validation implementation does not verify the creditor name). The account number provided in the request is in the beneficiary bankâ€™s books but classified as closed  and thus cannot receive incoming funds.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO4-CORRID-005\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"FAIL\",\n                    \"creditor_account_match\" : \"NMTC\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              },\n              \"scenario4_account_matches_but_name_does_match\" : {\n                \"description\" : \"The service provider is in 'scenario 4' (its jurisdiction requires to verify the creditor name but its pre-validation implementation does not verify the creditor name). The account number provided in the request identifies an account in the beneficiary bankâ€™s books and is in a  state to be the target account of a payment transaction. However the name of the account holder doesnâ€™t match  the one provided in the request.\",\n                \"value\" : {\n                  \"correlation_identifier\" : \"SCENARIO4-CORRID-006\",\n                  \"response\" : {\n                    \"account_validation_status\" : \"INCO\",\n                    \"creditor_account_match\" : \"MTCH\",\n                    \"creditor_name_match\" : \"NOTC\",\n                    \"creditor_address_match\" : \"NOAP\",\n                    \"creditor_organisation_identification_match\" : \"NOAP\"\n                  }\n                }\n              }\n            },\n            \"headers\" : {\n              \"LAUApplicationID\" : {\n                \"type\" : \"string\",\n                \"description\" : \"ID that identifies the application generationg the API and used by the gpi Connector to retrieve the related LAU keys\",\n                \"default\" : \"001\"\n              },\n              \"LAUVersion\" : {\n                \"type\" : \"string\",\n                \"description\" : \"version of the LAUSigned header. Mandatory. \\\"1.0\\\" for this first release\",\n                \"default\" : \"1.0\"\n              },\n              \"LAUCallTime\" : {\n                \"type\" : \"string\",\n                \"description\" : \"timestamp in UTC of the API call in the format YYYY-MM-DDTHH:MM:SS.sssZ\",\n                \"default\" : \"2018-03-23T15:56:27.728Z\"\n              },\n              \"LAURequestNonce\" : {\n                \"type\" : \"string\",\n                \"description\" : \"a random value generated by the client. Provided with the request and copied by the gpi Connector on the response\",\n                \"default\" : \"e802ab96-bb3a-4965-9139-5214b9f0f074\"\n              },\n              \"LAUResponseNonce\" : {\n                \"type\" : \"string\",\n                \"description\" : \"a random value generated by the gpi Connector on the response\",\n                \"default\" : \"5f1fdf6c-9bbb-4707-bf9e-776e9be878b3\"\n              },\n              \"LAUSignature\" : {\n                \"type\" : \"string\",\n                \"description\" : \"contains the LAU signature, base64 ecoded\",\n                \"default\" : \"U1khA8h9Lm1PqzB99fG6uw==\",\n                \"x-swift-lau-response\" : {\n                  \"cryptography\" : \"hmac-sha256\",\n                  \"sigBytes\" : 16,\n                  \"inputDataPrefix\" : \":\",\n                  \"inputDataDelimiter\" : \"CRLF\",\n                  \"inputData\" : {\n                    \"type\" : \"object\",\n                    \"properties\" : {\n                      \"LAUApplicationID\" : {\n                        \"type\" : \"string\"\n                      },\n                      \"LAUCallTime\" : {\n                        \"type\" : \"string\"\n                      },\n                      \"LAURequestNonce\" : {\n                        \"type\" : \"string\"\n                      },\n                      \"LAUResponseNonce\" : {\n                        \"type\" : \"string\"\n                      },\n                      \"LAUVersion\" : {\n                        \"type\" : \"string\"\n                      },\n                      \"responseBody\" : {\n                        \"type\" : \"string\"\n                      }\n                    },\n                    \"required\" : [ \"LAUApplicationID\", \"LAUCallTime\", \"LAURequestNonce\", \"LAUResponseNonce\", \"LAUVersion\", \"responseBody\" ]\n                  }\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/AccountVerificationResponse1\"\n            }\n          },\n          \"400\" : {\n            \"description\" : \"Bad Request\",\n            \"examples\" : {\n              \"scenario_not_allowed\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"CANT\",\n                  \"text\" : \"service provider is not allowed to provide an answer for this specific account\"\n                }\n              },\n              \"scenario_no_integration\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"CANT\",\n                  \"text\" : \"account requested cannot be verified because unexisting integration with the book system where this account is maintained\"\n                }\n              },\n              \"scenario_bad_request\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"SwAP501\",\n                  \"text\" : \"API request is malformed\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"401\" : {\n            \"description\" : \"Unauthorized\",\n            \"examples\" : {\n              \"scenario_invalid_token\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"SwAP002\",\n                  \"text\" : \"Invalid OAuth Token\"\n                }\n              },\n              \"scenario_insufficient_scope\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"SwAP003\",\n                  \"text\" : \"OAuth access token has insufficient scope for the requested service.\"\n                }\n              },\n              \"scenario_service_not_provisioned\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"SwAP001\",\n                  \"text\" : \"API service not provisioned\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"404\" : {\n            \"description\" : \"Not Found\",\n            \"examples\" : {\n              \"scenario_not_found\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"SwAP506\",\n                  \"text\" : \"Invalid Request. Resource does not exist.\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"429\" : {\n            \"description\" : \"Too many requests\",\n            \"examples\" : {\n              \"scenario_too_many_requests\" : {\n                \"status\" : {\n                  \"severity\" : \"Transient\",\n                  \"code\" : \"SwAP507\",\n                  \"text\" : \"Request cannot be processed at this time. Please try later. (header Retry-After indicates how long to wait before making a follow-up request)\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"500\" : {\n            \"description\" : \"Internal Server Error\",\n            \"examples\" : {\n              \"scenario_internal_error\" : {\n                \"status\" : {\n                  \"severity\" : \"Fatal\",\n                  \"code\" : \"InternalError\",\n                  \"text\" : \"Server encountered an unexpected condition and cannot fulfill the request\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"502\" : {\n            \"description\" : \"Bad Gateway\",\n            \"examples\" : {\n              \"scenario_bad_gateway\" : {\n                \"status\" : {\n                  \"severity\" : \"Transient\",\n                  \"code\" : \"SwAP508\",\n                  \"text\" : \"Invalid response received from Service Provider\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"503\" : {\n            \"description\" : \"Service Unavailable\",\n            \"examples\" : {\n              \"scenario_temp_not_available\" : {\n                \"status\" : {\n                  \"severity\" : \"Transient\",\n                  \"code\" : \"SwAP590\",\n                  \"text\" : \"Service is temporary unavailable (header Retry-After indicates how long to wait before making a follow-up request)\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          },\n          \"504\" : {\n            \"description\" : \"Gateway Timeout\",\n            \"examples\" : {\n              \"scenario_gateway_timeout\" : {\n                \"status\" : {\n                  \"severity\" : \"Transient\",\n                  \"code\" : \"SwAP509\",\n                  \"text\" : \"Service Provider time out\"\n                }\n              }\n            },\n            \"schema\" : {\n              \"$ref\" : \"#/definitions/ErrorCodeConsumer\"\n            }\n          }\n        },\n        \"security\" : [ {\n          \"SwiftLAU\" : [ ]\n        } ]\n      }\n    }\n  },\n  \"securityDefinitions\" : {\n    \"SwiftLAU\" : {\n      \"type\" : \"apiKey\",\n      \"name\" : \"LAUSignature\",\n      \"in\" : \"header\"\n    }\n  },\n  \"definitions\" : {\n    \"PostalAddress26\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"country\" : {\n          \"description\" : \"Nation with its own government.\",\n          \"$ref\" : \"#/definitions/CountryCode\"\n        },\n        \"address_line\" : {\n          \"type\" : \"array\",\n          \"description\" : \"Information that locates and identifies a specific address, as defined by postal services, presented in free format text.\",\n          \"items\" : {\n            \"$ref\" : \"#/definitions/Max70Text\"\n          },\n          \"maxItems\" : 7\n        },\n        \"post_code\" : {\n          \"description\" : \"Identifier consisting of a group of letters and/or numbers that is added to a postal address to assist the sorting of mail.\",\n          \"$ref\" : \"#/definitions/Max16Text\"\n        },\n        \"town_name\" : {\n          \"description\" : \"Name of a built-up area, with defined boundaries, and a local government.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        }\n      },\n      \"description\" : \"Information that locates and identifies a specific address, as defined by postal services.\",\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/PostalAddress26\"\n      }\n    },\n    \"UUIDv4Identifier\" : {\n      \"type\" : \"string\",\n      \"pattern\" : \"^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$\",\n      \"description\" : \"Universally Unique IDentifier (UUID) version 4, as described in IETC RFC 4122 \\\"Universally Unique IDentifier (UUID) URN Namespace\\\".\"\n    },\n    \"GenericOrganisationIdentification1\" : {\n      \"type\" : \"object\",\n      \"required\" : [ \"identification\" ],\n      \"properties\" : {\n        \"identification\" : {\n          \"description\" : \"Identification assigned by an institution.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        },\n        \"scheme_name\" : {\n          \"description\" : \"Name of the identification scheme.\",\n          \"$ref\" : \"#/definitions/OrganisationIdentificationSchemeName1Choice\"\n        },\n        \"issuer\" : {\n          \"description\" : \"Entity that assigns the identification.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        }\n      },\n      \"description\" : \"Information related to an identification of an organisation.\",\n      \"example\" : {\n        \"identification\" : \"AA1234567890\"\n      },\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/GenericOrganisationIdentification1\"\n      }\n    },\n    \"AccountValidationCheckContext1Code\" : {\n      \"type\" : \"string\",\n      \"enum\" : [ \"BENR\", \"PAYM\", \"RFPP\" ]\n    },\n    \"ExternalClearingSystemIdentification1Code\" : {\n      \"type\" : \"string\",\n      \"description\" : \"Specifies the clearing system identification code, as published in an external clearing system identification code list.\\r\\nExternal code sets can be downloaded from www.iso20022.org.\"\n    },\n    \"ExternalOrganisationIdentification1Code\" : {\n      \"type\" : \"string\",\n      \"description\" : \"Specifies the external organisation identification scheme name code in the format of character string with a maximum length of 4 characters.\\r\\nThe list of valid codes is an external code list published separately.\\r\\nExternal code sets can be downloaded from www.iso20022.org.\"\n    },\n    \"AnyBICIdentifier\" : {\n      \"type\" : \"string\",\n      \"pattern\" : \"^[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}$\",\n      \"description\" : \"Code allocated to a financial or non-financial institution by the ISO 9362 Registration Authority, as described in ISO 9362 \\\"Banking - Banking telecommunication messages - Business identifier code (BIC)\\\".\"\n    },\n    \"Max70Text\" : {\n      \"type\" : \"string\",\n      \"minLength\" : 1,\n      \"maxLength\" : 70,\n      \"description\" : \"Specifies a character string with a maximum length of 70characters.\"\n    },\n    \"AccountValidationResponse1Code\" : {\n      \"type\" : \"string\",\n      \"enum\" : [ \"NOTC\", \"NOAP\", \"NMTC\", \"MTCH\" ]\n    },\n    \"AccountValidationResponse2Code\" : {\n      \"type\" : \"string\",\n      \"enum\" : [ \"NMTC\", \"MTCH\" ]\n    },\n    \"AccountValidationResponse3Code\" : {\n      \"type\" : \"string\",\n      \"enum\" : [ \"PASS\", \"INCO\", \"FAIL\" ]\n    },\n    \"ValidationCheckReponse1\" : {\n      \"type\" : \"object\",\n      \"required\" : [ \"account_validation_status\", \"creditor_address_match\", \"creditor_name_match\", \"creditor_organisation_identification_match\" ],\n      \"properties\" : {\n        \"account_validation_status\" : {\n          \"description\" : \"Overall status of the account verification.\",\n          \"$ref\" : \"#/definitions/AccountValidationResponse3Code\"\n        },\n        \"creditor_account_match\" : {\n          \"description\" : \"Whether an account was found in the banks books identified by the provided creditor account identification (number) that can receive incoming funds.\",\n          \"$ref\" : \"#/definitions/AccountValidationResponse2Code\"\n        },\n        \"creditor_name_match\" : {\n          \"description\" : \"Result of matching the provided creditor name with the account holder name. The matching logic used must follow the same rules as the ones that would be apply when the transaction will be processed.\",\n          \"$ref\" : \"#/definitions/AccountValidationResponse1Code\"\n        },\n        \"creditor_address_match\" : {\n          \"description\" : \"Result of matching the provided creditor address with the account holder address. The matching logic used must follow the same rules as the ones that would be apply when the transaction will be processed.\",\n          \"$ref\" : \"#/definitions/AccountValidationResponse1Code\"\n        },\n        \"creditor_organisation_identification_match\" : {\n          \"description\" : \"Result of matching the provided creditor organization identification with the account holder name. The matching logic used must follow the same rules as the ones that would be apply when the transaction will be processed.\",\n          \"$ref\" : \"#/definitions/AccountValidationResponse1Code\"\n        }\n      },\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/ValidationCheckReponse1\"\n      }\n    },\n    \"ClearingSystemMemberIdentification2\" : {\n      \"type\" : \"object\",\n      \"required\" : [ \"member_identification\" ],\n      \"properties\" : {\n        \"clearing_system_identification\" : {\n          \"description\" : \"Specification of a pre-agreed offering between clearing agents or the channel through which the payment instruction is processed.\",\n          \"$ref\" : \"#/definitions/ClearingSystemIdentification2Choice\"\n        },\n        \"member_identification\" : {\n          \"description\" : \"Identification of a member of a clearing system.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        }\n      },\n      \"description\" : \"Unique identification, as assigned by a clearing system, to unambiguously identify a member of the clearing system.\",\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/ClearingSystemMemberIdentification2\"\n      }\n    },\n    \"FinancialInstitutionIdentification20\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"bicfi\" : {\n          \"description\" : \"Code allocated to a financial institution by the ISO 9362 Registration Authority as described in ISO 9362 \\\"Banking - Banking telecommunication messages - Business identifier code (BIC)\\\".\",\n          \"$ref\" : \"#/definitions/BICFIIdentifier\"\n        },\n        \"clearing_system_member_identification\" : {\n          \"description\" : \"Information used to identify a member within a clearing system.\",\n          \"$ref\" : \"#/definitions/ClearingSystemMemberIdentification2\"\n        }\n      },\n      \"description\" : \"Set of elements used to identify a financial institution.\",\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/FinancialInstitutionIdentification20\"\n      }\n    },\n    \"BICFIIdentifier\" : {\n      \"type\" : \"string\",\n      \"pattern\" : \"^[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}$\",\n      \"description\" : \"Code allocated to a financial institution by the ISO 9362 Registration Authority as described in ISO 9362 \\\"Banking - Banking telecommunication messages - Business identifier code (BIC)\\\".\"\n    },\n    \"AccountVerificationRequest\" : {\n      \"type\" : \"object\",\n      \"required\" : [ \"context\", \"creditor_account\", \"creditor_name\" ],\n      \"properties\" : {\n        \"correlation_identifier\" : {\n          \"description\" : \"Identifier of the request, assigned by the sender of the request. It will allow the requestor to correlate the request and the response.\",\n          \"$ref\" : \"#/definitions/Max50Text\"\n        },\n        \"context\" : {\n          \"description\" : \"Context in which this transaction is performed.\",\n          \"$ref\" : \"#/definitions/AccountValidationCheckContext1Code\"\n        },\n        \"uetr\" : {\n          \"description\" : \"UETR of the transaction that is going to be sent to this account.\",\n          \"$ref\" : \"#/definitions/UUIDv4Identifier\"\n        },\n        \"creditor_account\" : {\n          \"description\" : \"Identifies the account targeted by the transaction.\",\n          \"$ref\" : \"#/definitions/Max34Text\"\n        },\n        \"creditor_name\" : {\n          \"description\" : \"Name by which the creditor is known.\",\n          \"$ref\" : \"#/definitions/Max140Text\"\n        },\n        \"creditor_address\" : {\n          \"description\" : \"Information that locates and identifies the address of the creditor, as defined by postal services.\",\n          \"$ref\" : \"#/definitions/PostalAddress26\"\n        },\n        \"creditor_organisation_identification\" : {\n          \"description\" : \"Unique and unambiguous way to identify a creditor.\",\n          \"$ref\" : \"#/definitions/OrganisationIdentification8\"\n        },\n        \"creditor_agent\" : {\n          \"description\" : \"Financial institution servicing an account for the creditor.\",\n          \"$ref\" : \"#/definitions/FinancialInstitutionIdentification20\"\n        },\n        \"creditor_agent_branch_identification\" : {\n          \"description\" : \"Identifies a specific branch of the creditor.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        }\n      },\n      \"description\" : \"Beneficiary account verification request.\",\n      \"example\" : {\n        \"correlation_identifier\" : \"CORRID-003\",\n        \"context\" : \"BENR\",\n        \"uetr\" : \"b916a97d-a699-4f20-b8c2-2b07e2684a27\",\n        \"creditor_account\" : \"GB3112000000001987426375\",\n        \"creditor_name\" : \"John Doe\",\n        \"creditor_address\" : {\n          \"country\" : \"GB\"\n        },\n        \"creditor_organisation_identification\" : {\n          \"any_bic\" : \"BIC1GB51\"\n        }\n      },\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/AccountVerificationRequest\"\n      }\n    },\n    \"CountryCode\" : {\n      \"type\" : \"string\",\n      \"pattern\" : \"^[A-Z]{2,2}$\",\n      \"description\" : \"Code to identify a country, a dependency, or another area of particular geopolitical interest, on the basis of country names obtained from the United Nations (ISO 3166, Alpha-2 code).\"\n    },\n    \"Max140Text\" : {\n      \"type\" : \"string\",\n      \"minLength\" : 1,\n      \"maxLength\" : 140,\n      \"description\" : \"Specifies a character string with a maximum length of 140 characters.\"\n    },\n    \"Max35Text\" : {\n      \"type\" : \"string\",\n      \"minLength\" : 1,\n      \"maxLength\" : 35,\n      \"description\" : \"Specifies a character string with a maximum length of 35 characters.\"\n    },\n    \"AccountVerificationResponse1\" : {\n      \"type\" : \"object\",\n      \"required\" : [ \"response\" ],\n      \"properties\" : {\n        \"correlation_identifier\" : {\n          \"description\" : \"Identifier of the request, assigned by the sender of the request. It will allow the requestor to correlate the request and the response.\",\n          \"$ref\" : \"#/definitions/Max50Text\"\n        },\n        \"response\" : {\n          \"description\" : \"Provides the response to the account verification request.\",\n          \"$ref\" : \"#/definitions/ValidationCheckReponse1\"\n        }\n      },\n      \"description\" : \"Beneficiary account verification response.\",\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/AccountVerificationResponse1\"\n      }\n    },\n    \"Max16Text\" : {\n      \"type\" : \"string\",\n      \"minLength\" : 1,\n      \"maxLength\" : 16,\n      \"description\" : \"Specifies a character string with a maximum length of 16 characters.\"\n    },\n    \"ClearingSystemIdentification2Choice\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"code\" : {\n          \"description\" : \"Identification of a clearing system, in a coded form as published in an external list.\",\n          \"$ref\" : \"#/definitions/ExternalClearingSystemIdentification1Code\"\n        },\n        \"proprietary\" : {\n          \"description\" : \"Identification code for a clearing system, that has not yet been identified in the list of clearing systems.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        }\n      },\n      \"description\" : \"Choice of a clearing system identifier.\",\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/ClearingSystemIdentification2Choice\"\n      }\n    },\n    \"Max34Text\" : {\n      \"type\" : \"string\",\n      \"minLength\" : 1,\n      \"maxLength\" : 34,\n      \"description\" : \"Specifies a character string with a maximum length of 34 characters.\"\n    },\n    \"OrganisationIdentification8\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"any_bic\" : {\n          \"description\" : \"Code allocated to a financial institution or non financial institution by the ISO 9362 Registration Authority as described in ISO 9362 \\\"Banking - Banking telecommunication messages - Business identifier code (BIC)\\\".\",\n          \"$ref\" : \"#/definitions/AnyBICIdentifier\"\n        },\n        \"other\" : {\n          \"type\" : \"array\",\n          \"description\" : \"Unique identification of an organisation, as assigned by an institution, using an identification scheme.\",\n          \"items\" : {\n            \"$ref\" : \"#/definitions/GenericOrganisationIdentification1\"\n          }\n        }\n      },\n      \"description\" : \"Unique and unambiguous way to identify an organisation.\",\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/OrganisationIdentification8\"\n      }\n    },\n    \"OrganisationIdentificationSchemeName1Choice\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"code\" : {\n          \"description\" : \"Name of the identification scheme, in a coded form as published in an external list.\",\n          \"$ref\" : \"#/definitions/ExternalOrganisationIdentification1Code\"\n        },\n        \"proprietary\" : {\n          \"description\" : \"Name of the identification scheme, in a free text form.\",\n          \"$ref\" : \"#/definitions/Max35Text\"\n        }\n      },\n      \"description\" : \"Sets of elements to identify a name of the organisation identification scheme.\",\n      \"example\" : {\n        \"code\" : \"TXID\"\n      },\n      \"additionalProperties\" : {\n        \"$ref\" : \"#/definitions/OrganisationIdentificationSchemeName1Choice\"\n      }\n    },\n    \"Max50Text\" : {\n      \"type\" : \"string\",\n      \"minLength\" : 1,\n      \"maxLength\" : 50,\n      \"description\" : \"Specifies a character string with a maximum length of 50 characters.\"\n    },\n    \"ErrorCodeConsumer\" : {\n      \"type\" : \"object\",\n      \"required\" : [ \"status\" ],\n      \"properties\" : {\n        \"status\" : {\n          \"$ref\" : \"#/definitions/StatusCodeConnector\"\n        }\n      }\n    },\n    \"StatusCodeConnector\" : {\n      \"required\" : [ \"code\", \"severity\", \"text\" ],\n      \"properties\" : {\n        \"severity\" : {\n          \"type\" : \"string\",\n          \"enum\" : [ \"Fatal\", \"Transient\" ]\n        },\n        \"code\" : {\n          \"type\" : \"string\",\n          \"enum\" : [ \"SwAP001\", \"SwAP002\", \"SwAP003\", \"SwAP005\", \"SwAP006\", \"SwAP007\", \"SwAP008\", \"SwAP010\", \"SwAP009\", \"SwAP011\", \"SwAP099\", \"SwAP090\", \"SwAP501\", \"SwAP504\", \"SwAP506\", \"SwAP507\", \"SwAP521\", \"SwAP522\", \"SwAP590\", \"SwAP591\", \"SwAPProxy001\", \"SwAPProxy002\", \"SwAPProxy003\", \"SwAPProxy004\", \"SwAPProxy005\", \"SwAPProxy006\", \"SwAPProxy007\", \"SwAPProxy008\", \"CANT\", \"UNAV\", \"InvalidRequest\", \"MandatoryFieldMissing\", \"MyInstitutionAuthorizationFailure\", \"FromAuthorizationFailure\", \"NoResultFound\", \"UnknownTransaction\", \"InvalidRBACRole\", \"InternalError\" ]\n        },\n        \"text\" : {\n          \"type\" : \"string\"\n        }\n      }\n    }\n  }\n}",
+			"type": "string"
+		},
+		{
+			"id": "0224485f-3c6c-44ec-8641-115507790d52",
+			"key": "bic",
+			"value": "BANABEBB",
+			"type": "string"
+		},
+		{
+			"id": "00043f71-34b7-48f1-b3aa-ba8d56198f9b",
+			"key": "dn",
+			"value": " \"o=cclausb0,o=swift\"",
+			"type": "string"
+		}
+	]
+}
